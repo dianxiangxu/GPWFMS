@@ -16,16 +16,18 @@ $(function() {
 			.validate(
 					{
 						rules : {
+							//changes here
 							username : {
 								required : true,
 								minlength : 3
 							},
 							password : {
 								required : true,
-								minlength : 6,
-								maxlength : 15
+								minlength : 8,
+								maxlength : 64
 							}
 						},
+
 						errorElement : "label",
 						messages : {
 							username : {
@@ -34,10 +36,11 @@ $(function() {
 							},
 							password : {
 								required : "Please provide a password",
-								minlength : "Your password must be between 6 and 15 characters",
-								maxlength : "Your password must be between 6 and 15 characters"
+								minlength : "Your password must be between 8 and 64 characters",
+								maxlength : "Your password must be between 8 and 64 characters"
 							}
 						},
+						//end changes 
 						submitHandler : function(form, event) {
 							if ($("#remember_me").is(':checked')) {
 								toMem();
