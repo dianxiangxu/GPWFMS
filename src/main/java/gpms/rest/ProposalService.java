@@ -1078,24 +1078,7 @@ public class ProposalService {
 			StringBuffer contentProfile = new StringBuffer();
 			BalanaConnector ac = new BalanaConnector();
 			if (root != null && root.has("proposalInfo")) {
-				JsonNode proposalInfo = root.get("proposalInfo");
-				//Author: Patrick Chapman
-				//Validates signature fields to prevent
-				//XSS attacks and authorized signature
-				//fields.
-				//Update: 4/10/17
-				UserInputValidator inputValidator = new UserInputValidator();
-				
-				//grabs current user's signature information, project title,
-				//and granting agency
-				ArrayList<String> userSigInfo = new ArrayList<String>
-										(Arrays.asList(proposalInfo
-										.get("SignatureInfo").textValue().split("!#!")));
-				//if(userSigInfo.size() > MAX_SIG_INFO_LENGTH){
-				//	throw new Exception("Signature information has been illegally tampered with!");
-				//}
-
-			
+				JsonNode proposalInfo = root.get("proposalInfo");			
 				
 				if (proposalInfo != null && proposalInfo.has("ProposalID")) {
 					proposalId = proposalInfo.get("ProposalID").textValue();
@@ -1234,7 +1217,7 @@ public class ProposalService {
 							.generateAttributes(policyInfo);
 					BalanaConnector ac = new BalanaConnector();
 					String decision = ac.getXACMLdecision(attrMap);
-					if (decision.equals("Permit")) {
+ 					if (decision.equals("Permit")) {
 						return Response
 								.status(200)
 								.type(MediaType.APPLICATION_JSON)
@@ -1591,36 +1574,63 @@ public class ProposalService {
 		JsonNode root = mapper.readTree(message);
 		JsonNode proposalInfo = null;
 		boolean proposalIsChanged = false;
+		
+		
+		
 		if (root != null && root.has("proposalInfo")) {
 			proposalInfo = root.get("proposalInfo");
 			System.out.println(root.textValue());
-			//Adding user access validation
-			//I have a feeling that this can be exploited by manipulating
-			//JSON object that is sent back to the server.
-			//Patrick Chapman
 			
-			//Grabs the current user's role in the proposal
-			JsonNode  proposalRole = root.get("proposalRoles");
-			if(proposalRole.textValue().equals("PI") ||
-				proposalRole.textValue().equals("")){ // "" for when proposal is first created
-				//End of Patrick code	
-				proposalDAO.getProjectInfo(existingProposal, proposalID,
-						proposalInfo);
-				proposalDAO.getSponsorAndBudgetInfo(existingProposal, proposalID,
-						proposalInfo);
-				proposalDAO.getCostShareInfo(existingProposal, proposalID,
-						proposalInfo);
-				proposalDAO.getUniversityCommitments(existingProposal, proposalID,
-						proposalInfo);
-				proposalDAO.getConflictOfInterest(existingProposal, proposalID,
-						proposalInfo);
-				proposalDAO.getAdditionalInfo(existingProposal, proposalID,
-						proposalInfo);
-				proposalDAO.getCollaborationInfo(existingProposal, proposalID,
-						proposalInfo);
-				proposalDAO.getConfidentialInfo(existingProposal, proposalID,
-						proposalInfo);
+			
+			//Author: Patrick Chapman
+			//Update: 8/17/17
+			//Currently uses XACML policies to determine
+			//if user has permission to save initial proposal
+			//details. Currently has to modify policy info and
+			//is inefficient because of it.
+			if (root.has("policyInfo")) {
+				JsonNode policyInfo = root.get("policyInfo");
+				if (policyInfo != null && policyInfo.isArray()
+						&& policyInfo.size() > 0) {
+					HashMap<String, Multimap<String, String>> attrMap = proposalDAO
+							.generateAttributes(policyInfo);
+					
+					Multimap<String, String> actionReplace = ArrayListMultimap.create();
+					actionReplace.put("proposal.action", "Edit");
+					attrMap.replace("Action", actionReplace);
+					
+					Multimap<String, String> sectionReplace = ArrayListMultimap.create();
+					sectionReplace.put("proposal.section", "Project Information");
+					sectionReplace.put("DeletedByPI", "NOTDELETED");
+					sectionReplace.put("SubmittedByPI", "NOTSUBMITTED");
+					attrMap.replace("Resource", sectionReplace);
+					BalanaConnector ac = new BalanaConnector();
+					String decision = ac.getXACMLdecision(attrMap);
+					
+					if (decision.equals("Permit") ||
+						decision.equals("NotApplicable")) {	
+							proposalDAO.getProjectInfo(existingProposal, proposalID,
+									proposalInfo);
+							proposalDAO.getSponsorAndBudgetInfo(existingProposal, proposalID,
+									proposalInfo);
+							proposalDAO.getCostShareInfo(existingProposal, proposalID,
+									proposalInfo);
+							proposalDAO.getUniversityCommitments(existingProposal, proposalID,
+									proposalInfo);
+							proposalDAO.getConflictOfInterest(existingProposal, proposalID,
+									proposalInfo);
+							proposalDAO.getAdditionalInfo(existingProposal, proposalID,
+									proposalInfo);
+							proposalDAO.getCollaborationInfo(existingProposal, proposalID,
+									proposalInfo);
+							proposalDAO.getConfidentialInfo(existingProposal, proposalID,
+									proposalInfo);
+					}
+				}
 			}
+			//End of Patrick Code
+				
+			
 			if (!isAdminUser) {
 				// OSP Section
 				JsonNode proposalUserTitle = root.get("proposalUserTitle");
