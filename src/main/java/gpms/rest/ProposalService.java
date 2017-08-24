@@ -1574,7 +1574,13 @@ public class ProposalService {
 		JsonNode root = mapper.readTree(message);
 		JsonNode proposalInfo = null;
 		boolean proposalIsChanged = false;
-		
+		//Setting up variables for XACML decision making
+		Multimap<String, String> sectionReplace = ArrayListMultimap.create();
+		sectionReplace.put("proposal.section", "Project Information");
+		sectionReplace.put("DeletedByPI", "NOTDELETED");
+		sectionReplace.put("SubmittedByPI", "NOTSUBMITTED");
+		Multimap<String, String> actionReplace = ArrayListMultimap.create();
+		actionReplace.put("proposal.action", "Edit");
 		
 		
 		if (root != null && root.has("proposalInfo")) {
@@ -1586,8 +1592,7 @@ public class ProposalService {
 			//Update: 8/17/17
 			//Currently uses XACML policies to determine
 			//if user has permission to save initial proposal
-			//details. Currently has to modify policy info and
-			//is inefficient because of it.
+			//details.
 			if (root.has("policyInfo")) {
 				JsonNode policyInfo = root.get("policyInfo");
 				if (policyInfo != null && policyInfo.isArray()
@@ -1595,18 +1600,13 @@ public class ProposalService {
 					HashMap<String, Multimap<String, String>> attrMap = proposalDAO
 							.generateAttributes(policyInfo);
 					
-					Multimap<String, String> actionReplace = ArrayListMultimap.create();
-					actionReplace.put("proposal.action", "Edit");
-					attrMap.replace("Action", actionReplace);
-					
-					Multimap<String, String> sectionReplace = ArrayListMultimap.create();
-					sectionReplace.put("proposal.section", "Project Information");
-					sectionReplace.put("DeletedByPI", "NOTDELETED");
-					sectionReplace.put("SubmittedByPI", "NOTSUBMITTED");
+					//Adding edit action and proposal information resources
+					attrMap.replace("Action", actionReplace);	
 					attrMap.replace("Resource", sectionReplace);
 					BalanaConnector ac = new BalanaConnector();
 					String decision = ac.getXACMLdecision(attrMap);
 					
+					//From XACML decision
 					if (decision.equals("Permit") ||
 						decision.equals("NotApplicable")) {	
 							proposalDAO.getProjectInfo(existingProposal, proposalID,
