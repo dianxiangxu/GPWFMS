@@ -89,6 +89,7 @@ public class ProposalService {
 	public DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
 	private static final Logger log = Logger.getLogger(ProposalService.class
 			.getName());
+	private BalanaConnector ac = new BalanaConnector();
 	
 	
 
@@ -416,7 +417,7 @@ public class ProposalService {
 									existingProposal, signatures, authorProfile);
 					HashMap<String, Multimap<String, String>> attrMap = proposalDAO
 							.generateAttributes(policyInfo);
-					BalanaConnector ac = new BalanaConnector();
+					
 					Set<AbstractResult> set = ac
 							.getXACMLdecisionWithObligations(attrMap,
 									contentProfile);
@@ -897,7 +898,6 @@ public class ProposalService {
 					StringBuffer contentProfile = proposalDAO
 							.generateContentProfile(proposalId,
 									existingProposal, signatures, authorProfile);
-					BalanaConnector ac = new BalanaConnector();
 					HashMap<String, Multimap<String, String>> attrMap = proposalDAO
 							.generateAttributes(policyInfo);
 					Set<AbstractResult> set = ac
@@ -1076,7 +1076,6 @@ public class ProposalService {
 			Proposal existingProposal = new Proposal();
 			Proposal oldProposal = new Proposal();
 			StringBuffer contentProfile = new StringBuffer();
-			BalanaConnector ac = new BalanaConnector();
 			if (root != null && root.has("proposalInfo")) {
 				JsonNode proposalInfo = root.get("proposalInfo");			
 				
@@ -1215,7 +1214,6 @@ public class ProposalService {
 						&& policyInfo.size() > 0) {
 					HashMap<String, Multimap<String, String>> attrMap = proposalDAO
 							.generateAttributes(policyInfo);
-					BalanaConnector ac = new BalanaConnector();
 					String decision = ac.getXACMLdecision(attrMap);
  					if (decision.equals("Permit")) {
 						return Response
@@ -1603,7 +1601,6 @@ public class ProposalService {
 					//Adding edit action and proposal information resources
 					attrMap.replace("Action", actionReplace);	
 					attrMap.replace("Resource", sectionReplace);
-					BalanaConnector ac = new BalanaConnector();
 					String decision = ac.getXACMLdecision(attrMap);
 					
 					//From XACML decision

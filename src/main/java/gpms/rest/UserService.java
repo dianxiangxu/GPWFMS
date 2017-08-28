@@ -919,32 +919,40 @@ public class UserService {
 						.entity("{\"error\": \"Could Not Find The User\", \"status\": \"FAIL\"}")
 						.build();
 			}
-			List<UserProfile> userList = userProfileDAO.findAll();
+			
+			//Author: Patrick Chapman
+			//Rewrote login process to only search for user by email/username
+			//instead of loading a user profile for every single user.
+			//Updated: 8/27/2017
+			UserProfile user = userProfileDAO.findAnyUserWithSameEmail(email);
+	
+			if(user == null){
+				user = userProfileDAO.findAnyUserWithSameUserName(email);
+			}
+			
 			boolean isFound = false;
-			if (userList.size() != 0) {
-				for (UserProfile user : userList) {
-					if (user.getUserAccount().getUserName().equals(email)
-							|| user.getWorkEmails().contains(email)) {
-						if (PasswordHash.validatePassword(password, user
-								.getUserAccount().getPassword())
-								&& !user.isDeleted()
-								&& user.getUserAccount().isActive()
-								&& !user.getUserAccount().isDeleted()) {
-							isFound = true;
+			
+			if (user.getUserAccount().getUserName().equals(email)
+				|| user.getWorkEmails().contains(email)) {
+				if (PasswordHash.validatePassword(password, user
+					.getUserAccount().getPassword())
+					&& !user.isDeleted()
+					&& user.getUserAccount().isActive()
+					&& !user.getUserAccount().isDeleted()) {
+						isFound = true;
 
-							userProfileDAO.setMySessionID(req, user.getId()
-									.toString());
-							java.net.URI location = new java.net.URI(
-									"../Home.jsp");
-							if (user.getUserAccount().isAdmin()) {
-								location = new java.net.URI("../Dashboard.jsp");
-							}
-							return Response.seeOther(location).build();
+						userProfileDAO.setMySessionID(req, user.getId()
+								.toString());
+						java.net.URI location = new java.net.URI(
+								"../Home.jsp");
+						if (user.getUserAccount().isAdmin()) {
+							location = new java.net.URI("../Dashboard.jsp");
+						}
+						return Response.seeOther(location).build();
 						} else {
 							isFound = false;
 						}
-					}
-				}
+		
 			} else {
 				isFound = false;
 			}
@@ -953,6 +961,7 @@ public class UserService {
 						"../Login.jsp?msg=error");
 				return Response.seeOther(location).build();
 			}
+			//End of Patrick code
 		} catch (Exception e) {
 			log.error("Could not find the User error e=", e);
 		}
