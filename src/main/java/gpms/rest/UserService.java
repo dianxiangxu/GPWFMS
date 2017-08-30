@@ -921,40 +921,45 @@ public class UserService {
 			}
 			
 			//Author: Patrick Chapman
+			//Updated: 8/27/2017
 			//Rewrote login process to only search for user by email/username
 			//instead of loading a user profile for every single user.
-			//Updated: 8/27/2017
+			//Update: 8/29/17
+			//Fixed error whenever user entered in account that did not exist
+			
+			//Finds user by email or username
 			UserProfile user = userProfileDAO.findAnyUserWithSameEmail(email);
-	
 			if(user == null){
 				user = userProfileDAO.findAnyUserWithSameUserName(email);
 			}
 			
 			boolean isFound = false;
-			
-			if (user.getUserAccount().getUserName().equals(email)
-				|| user.getWorkEmails().contains(email)) {
-				if (PasswordHash.validatePassword(password, user
-					.getUserAccount().getPassword())
-					&& !user.isDeleted()
-					&& user.getUserAccount().isActive()
-					&& !user.getUserAccount().isDeleted()) {
-						isFound = true;
+			//if user is found
+			if(user != null) {
+				if (user.getUserAccount().getUserName().equals(email)
+					|| user.getWorkEmails().contains(email)) {
+					if (PasswordHash.validatePassword(password, user
+						.getUserAccount().getPassword())
+						&& !user.isDeleted()
+						&& user.getUserAccount().isActive()
+						&& !user.getUserAccount().isDeleted()) {
+							isFound = true;
 
-						userProfileDAO.setMySessionID(req, user.getId()
-								.toString());
-						java.net.URI location = new java.net.URI(
-								"../Home.jsp");
-						if (user.getUserAccount().isAdmin()) {
-							location = new java.net.URI("../Dashboard.jsp");
-						}
-						return Response.seeOther(location).build();
-						} else {
-							isFound = false;
-						}
+							userProfileDAO.setMySessionID(req, user.getId()
+									.toString());
+							java.net.URI location = new java.net.URI(
+									"../Home.jsp");
+							if (user.getUserAccount().isAdmin()) {
+								location = new java.net.URI("../Dashboard.jsp");
+							}
+							return Response.seeOther(location).build();
+							} else {
+								isFound = false;
+							}
 		
-			} else {
-				isFound = false;
+				} else {
+					isFound = false;
+				}
 			}
 			if (!isFound) {
 				java.net.URI location = new java.net.URI(

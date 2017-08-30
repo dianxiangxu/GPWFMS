@@ -67,6 +67,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
 import com.mongodb.MongoClient;
 
@@ -89,6 +90,10 @@ public class ProposalService {
 	public DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
 	private static final Logger log = Logger.getLogger(ProposalService.class
 			.getName());
+	private final String approveRA = "ApprovedByUniversityResearchAdministrator";
+	private final String approveDirector = "ApprovedByUniversityResearchDirector";
+	private final String raTitle = "University Research Administrator";
+	private final String directorTitle = "University Research Director";
 	private BalanaConnector ac = new BalanaConnector();
 	
 	
@@ -1208,6 +1213,9 @@ public class ProposalService {
 			log.info("ProposalService::checkUserPermissionForAProposal started");
 			ObjectMapper mapper = new ObjectMapper();
 			JsonNode root = mapper.readTree(message);
+			
+			
+			
 			if (root != null && root.has("policyInfo")) {
 				JsonNode policyInfo = root.get("policyInfo");
 				if (policyInfo != null && policyInfo.isArray()
@@ -1278,6 +1286,7 @@ public class ProposalService {
 		List<String> emaillist = new ArrayList<String>();
 		emailSubject = "The proposal has been deleted by: " + authorUserName;
 		emailBody = "Hello User,<br/><br/>The proposal has been deleted by Admin.<br/><br/>Thank you, <br/> GPMS Team";
+		//Should find only users for the current proposal
 		List<SignatureUserInfo> signatures = proposalDAO
 				.findAllUsersToBeNotified(id,
 						existingProposal.isIrbApprovalRequired());
@@ -1565,20 +1574,19 @@ public class ProposalService {
 			boolean isAdminUser, String proposalID,
 			List<SignatureUserInfo> signatures, boolean irbApprovalRequired,
 			RequiredSignaturesInfo requiredSignatures, String action)
-			throws UnknownHostException, Exception, ParseException,
-			IOException, JsonParseException, JsonMappingException {
+			throws Exception {
 		String authorUserName = authorProfile.getFullName();
 		ObjectMapper mapper = new ObjectMapper();
 		JsonNode root = mapper.readTree(message);
 		JsonNode proposalInfo = null;
 		boolean proposalIsChanged = false;
 		//Setting up variables for XACML decision making
-		Multimap<String, String> sectionReplace = ArrayListMultimap.create();
-		sectionReplace.put("proposal.section", "Project Information");
-		sectionReplace.put("DeletedByPI", "NOTDELETED");
-		sectionReplace.put("SubmittedByPI", "NOTSUBMITTED");
-		Multimap<String, String> actionReplace = ArrayListMultimap.create();
-		actionReplace.put("proposal.action", "Edit");
+		Multimap<String, String> PISectionReplace = ArrayListMultimap.create();
+		PISectionReplace.put("proposal.section", "Project Information");
+		PISectionReplace.put("DeletedByPI", "NOTDELETED");
+		PISectionReplace.put("SubmittedByPI", "NOTSUBMITTED");
+		Multimap<String, String> PIActionReplace = ArrayListMultimap.create();
+		PIActionReplace.put("proposal.action", "Edit");
 		
 		
 		if (root != null && root.has("proposalInfo")) {
@@ -1591,6 +1599,9 @@ public class ProposalService {
 			//Currently uses XACML policies to determine
 			//if user has permission to save initial proposal
 			//details.
+			//Update: 8/27/17
+			//Adding in XACML policy decision making for
+			//OSP section.
 			if (root.has("policyInfo")) {
 				JsonNode policyInfo = root.get("policyInfo");
 				if (policyInfo != null && policyInfo.isArray()
@@ -1599,8 +1610,8 @@ public class ProposalService {
 							.generateAttributes(policyInfo);
 					
 					//Adding edit action and proposal information resources
-					attrMap.replace("Action", actionReplace);	
-					attrMap.replace("Resource", sectionReplace);
+					attrMap.replace("Action", PIActionReplace);	
+					attrMap.replace("Resource", PISectionReplace);
 					String decision = ac.getXACMLdecision(attrMap);
 					
 					//From XACML decision
@@ -1623,38 +1634,60 @@ public class ProposalService {
 							proposalDAO.getConfidentialInfo(existingProposal, proposalID,
 									proposalInfo);
 					}
-				}
-			}
-			//End of Patrick Code
 				
 			
+				
+			//OSP section resource
+			Multimap<String, String> OSPSectionReplace = ArrayListMultimap.create();
+			OSPSectionReplace.put("proposal.section", "OSP Section");
+			
+			//Getting proposal user title
+			JsonNode proposalUserTitle = root.get("proposalUserTitle");
+			
+			//Determining which user is editing OSP section
+			if(proposalUserTitle.textValue().equals(raTitle)){
+				OSPSectionReplace.put(approveRA, "READYFORAPPROVAL");
+			}else if(proposalUserTitle.textValue().equals(directorTitle)) {
+				OSPSectionReplace.put(approveDirector, "READYFORAPPROVAL");
+			}
+			//Creating OSP edit action
+			Multimap<String, String> ApproveActionReplace = ArrayListMultimap.create();
+			ApproveActionReplace.put("proposal.action", "Edit");
+			
+			//Adding in attributes/resources for XACML decision
+			attrMap.replace("Action", ApproveActionReplace);
+			attrMap.replace("Resource", OSPSectionReplace);
+			String OSPdecision = ac.getXACMLdecision(attrMap);
+
 			if (!isAdminUser) {
 				// OSP Section
-				JsonNode proposalUserTitle = root.get("proposalUserTitle");
-				if ((proposalUserTitle.textValue().equals(
-						"University Research Administrator") || proposalUserTitle
-						.textValue().equals("University Research Director"))
-						&& !proposalID.equals("0")
-						&& !action.equals("Disapprove")) {
-					proposalDAO.getOSPSectionInfo(existingProposal,
+					if (!proposalID.equals("0")
+						&& !action.equals("Disapprove")
+						&& OSPdecision.equals("Permit")) {
+						
+							proposalDAO.getOSPSectionInfo(existingProposal,
 							proposalInfo);
-				} else {
-					if (!proposalID.equals("0")) {
-						existingProposal.setOspSectionInfo(oldProposal
-								.getOspSectionInfo());
+							
+					} else {
+						if (!proposalID.equals("0")) {
+							existingProposal.setOspSectionInfo(oldProposal
+									.getOspSectionInfo());
+						}
 					}
+					proposalIsChanged = notifyUsersProposalStatusUpdate(
+							existingProposal, oldProposal, authorProfile,
+							proposalID, signatures, irbApprovalRequired,
+							requiredSignatures, authorUserName, root,
+							proposalUserTitle);
+				} else {
+					proposalIsChanged = notifyUsersProposalStatusUpdate(
+							existingProposal, oldProposal, authorProfile,
+							proposalID, authorUserName);
 				}
-				proposalIsChanged = notifyUsersProposalStatusUpdate(
-						existingProposal, oldProposal, authorProfile,
-						proposalID, signatures, irbApprovalRequired,
-						requiredSignatures, authorUserName, root,
-						proposalUserTitle);
-			} else {
-				proposalIsChanged = notifyUsersProposalStatusUpdate(
-						existingProposal, oldProposal, authorProfile,
-						proposalID, authorUserName);
+			}
 			}
 		}
+		//End of Patrick Code
 		return proposalIsChanged;
 	}
 
