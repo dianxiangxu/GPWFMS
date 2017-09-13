@@ -110,7 +110,7 @@ public class ProposalDAO extends BasicDAO<Proposal, String> {
 	private final int MAX_AGENCY_LIST_LENGTH = 50;
 	private final int MAX_NAME_LIST = 50;
 	private final int MAX_PAGES_LENGTH = 50;
-	private final int MAX_SIGN_LENGTH = 45;
+	private final int MAX_SIGN_LENGTH = 20;
 	private final int MAX_TITLE_LENGTH = 250;
 	private final int MAX_NOTE_LENGTH = 180;
 	private final int MAX_DATE_LENGTH = 35;
@@ -3152,8 +3152,7 @@ public class ProposalDAO extends BasicDAO<Proposal, String> {
 					boolean alreadyExist = false;
 					for (Appendix appendix : oldProposal.getAppendices()) {
 						for (Appendix appendixObj : appendixInfo) {
-							inputValidator.validateInput(appendix.getFilename()
-									, MAX_NAME_LIST);
+							
 							
 							if (appendix.getFilename().equalsIgnoreCase(
 									appendixObj.getFilename())
@@ -3199,7 +3198,6 @@ public class ProposalDAO extends BasicDAO<Proposal, String> {
 							}
 							uploadFile.setFilepath("/uploads/" + fileName);
 							String fileTitle = uploadFile.getTitle().trim();
-							inputValidator.validateInput(fileTitle, MAX_NAME_LIST);
 							if (validateNotEmptyValue(fileTitle)) {
 								uploadFile.setTitle(fileTitle);
 							} else {
@@ -3238,7 +3236,6 @@ public class ProposalDAO extends BasicDAO<Proposal, String> {
 						uploadFile.setFilesize(fileSize);
 						uploadFile.setFilepath("/uploads/" + fileName);
 						String fileTitle = uploadFile.getTitle().trim();
-						inputValidator.validateInput(fileTitle, MAX_NAME_LIST);
 						if (validateNotEmptyValue(fileTitle)) {
 							uploadFile.setTitle(fileTitle);
 						} else {

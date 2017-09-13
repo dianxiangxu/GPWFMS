@@ -22,6 +22,7 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -40,6 +41,8 @@ import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import gpms.model.GPMSCommonInfo;
 
 @Path("/files")
 @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML,
@@ -62,6 +65,16 @@ public class FileService {
 			@Context HttpServletResponse response) throws ServletException {
 		try {
 			log.info("FileService::downloadFile started");
+			
+			//Author: Patrick Chapman
+			//Validate User sesssion when downloading file
+			HttpSession session = request.getSession();
+			if (session.getAttribute("userProfileId") == null) {
+				throw new ServletException("Invalid session!");
+			}
+			//End Patrick Code
+			
+			
 			String fileName = request.getParameter("fileName");
 			if (fileName == null || fileName.equals("")) {
 				throw new ServletException("File Name can't be null or empty");
@@ -114,12 +127,21 @@ public class FileService {
 	@ApiResponses(value = {
 			@ApiResponse(code = 200, message = "Success: { true }"),
 			@ApiResponse(code = 404, message = "Failed: { \"error\":\"error description\", \"status\": \"FAIL\" }") })
-	public Response uploadFile(
+	public Response uploadFile(@Context HttpServletRequest request,
 			@ApiParam(value = "file", required = true, defaultValue = "", allowableValues = "", allowMultiple = false) @FormDataParam("file") InputStream fileInputStream,
 			@ApiParam(value = "file", required = true, defaultValue = "", allowableValues = "", allowMultiple = false) @FormDataParam("file") FormDataContentDisposition fileMetaData)
 			throws ServletException {
 		try {
 			log.info("FileService::uploadFile started");
+			
+			//Author: Patrick Chapman
+			//Validate User sesssion when downloading file
+			HttpSession session = request.getSession();
+			if (session.getAttribute("userProfileId") == null) {
+				throw new ServletException("Invalid session!");
+			}
+			//End Patrick Code
+			
 			String UPLOAD_PATH = new String();
 			try {
 				UPLOAD_PATH = this.getClass().getResource("/uploads").toURI()

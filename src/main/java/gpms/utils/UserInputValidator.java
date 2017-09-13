@@ -51,7 +51,7 @@ public class UserInputValidator {
 			throw new ValidationException("Input may only contain numbers!");
 		}
 		if((userInputCopy.length() > length) || (userInputCopy.length() == 0)){
-			throw new ValidationException("Fields does not contain the right amount of numbers!");
+			throw new ValidationException("Fields do not contain the right amount of numbers!");
 		}
 	}
 	
@@ -69,7 +69,7 @@ public class UserInputValidator {
 		//Allow alpha-numeric ONLY for the usernames
 		if(!userInputCopy.matches("^[a-zA-z0-9]*$") ||
 		userInputCopy.contains("script")){
-			throw new ValidationException("Invalid characters passed in.");
+			throw new ValidationException("Invalid characters passed in Username field.");
 		}
 		
 		if((userInputCopy.length() > length) || (userInputCopy.length()) == 0){

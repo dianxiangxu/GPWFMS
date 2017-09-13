@@ -2653,7 +2653,7 @@ $(function() {
 					+ fullName
 					+ '</span></td><td><input id="pi_signature" data-for="signature" data-value="'
 					+ $('select[name="ddlName"]').eq(0).val()
-					+ '" title="PI\'s Signature" class="sfInputbox" placeholder="PI\'s Signature" type="text" required="true" maxlength="45" name="'
+					+ '" title="PI\'s Signature" class="sfInputbox" placeholder="PI\'s Signature" type="text" required="true" maxlength="20" name="'
 					+ $('select[name="ddlName"]').eq(0).val()
 					+ 'PI">'
 					+ '</td><td><input id="pi_signaturedate" data-for="signaturedate" name="signaturedate'
